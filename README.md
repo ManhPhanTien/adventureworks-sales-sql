@@ -267,15 +267,3 @@ GROUP BY 1,2;
 3. **Territory 4 is a stable #1 performer** across 4 straight years, but 2014 shows a sharp drop from the 2013 peak — worth root-cause investigation.
 4. **A ~quarterly repurchase pattern (M3 spike)** shows up in the cohort data — a concrete signal for timing re-engagement campaigns.
 5. **Inventory is uneven**: some lines (HL Mountain Frame) are wildly overstocked relative to sales, while others turn over efficiently — a clear opportunity for inventory rebalancing.
-
----
-
-## 🛠️ Skills Demonstrated
-
-- **Window functions** (`LAG`, `RANK`, `MIN() OVER (PARTITION BY ...)`) for period-over-period comparisons, ranking, and cohort logic
-- **CTEs** for readable, modular multi-step logic (`WITH ... AS`)
-- Multi-table **JOINs** across a normalized, real-world relational schema (Sales / Production / Purchasing)
-- **Cohort / retention analysis** pattern — a common growth & marketing analytics technique
-- Date functions (`EXTRACT`, `DATE_DIFF`, `FORMAT_DATE`) and safe null-handling (`IFNULL`)
-- Translating raw query output into **business insights and recommendations**, not just numbers
-- Working with Google Cloud Platform / BigQuery console end-to-end
