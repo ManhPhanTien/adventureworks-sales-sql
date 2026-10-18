@@ -29,20 +29,20 @@ AdventureWorks is one of the most widely used **relational, multi-table business
 
 **Query:**
 ```sql
-SELECT format_date('%b %Y', sale.ModifiedDate) as period
+SELECT format_date('%b %Y',sale.ModifiedDate) as period
       ,subprd.Name as name
-      ,SUM(OrderQty) as qty
-      ,SUM(LineTotal) as total_sales
-      ,COUNT(DISTINCT SalesOrderID) as order_cnt
+      ,sum(OrderQty) as qty 
+      ,sum(LineTotal) as total_sales
+      ,count(distinct SalesOrderID) as order_cnt 
 FROM adventureworks2019.Production.Product as prd
-INNER JOIN adventureworks2019.Production.ProductSubcategory as subprd
-  ON CAST(subprd.ProductSubcategoryID as STRING) = prd.ProductSubcategoryID
-INNER JOIN adventureworks2019.Sales.SalesOrderDetail as sale USING (ProductID)
-WHERE (
-  DATE_DIFF(DATE((SELECT MAX(ModifiedDate) FROM adventureworks2019.Sales.SalesOrderDetail))
-  ,DATE(sale.ModifiedDate)
-  ,MONTH) <= 12
-)
+INNER JOIN adventureworks2019.Production.ProductSubcategory as subprd 
+  ON cast (subprd.ProductSubcategoryID as string) = prd.ProductSubcategoryID
+INNER JOIN adventureworks2019.Sales.SalesOrderDetail as sale 
+  USING (ProductID)
+WHERE 
+  date_diff(date ((select max(ModifiedDate) from adventureworks2019.Sales.SalesOrderDetail))
+            ,date(sale.ModifiedDate)
+            ,month) <12
 GROUP BY 1,2
 ORDER BY 1 DESC,2;
 ```
@@ -58,25 +58,25 @@ ORDER BY 1 DESC,2;
 **Query:**
 ```sql
 WITH year_pre AS
-  (SELECT subprd.Name as name
-        ,EXTRACT(YEAR FROM sale.ModifiedDate) as year
-        ,SUM(OrderQty) as qty
-  FROM adventureworks2019.Production.Product as prd
+  (SELECT subprd.Name as name 
+        ,extract (year from sale.ModifiedDate) as yr
+        ,sum(OrderQty) as qty
+  FROM adventureworks2019.Production.Product as prd 
   INNER JOIN adventureworks2019.Sales.SalesOrderDetail as sale
     USING (ProductID)
   INNER JOIN adventureworks2019.Production.ProductSubcategory as subprd
-    ON CAST(subprd.ProductSubcategoryID as STRING) = prd.ProductSubcategoryID
+    ON cast (subprd.ProductSubcategoryID as string) = prd.ProductSubcategoryID
   GROUP BY 1,2)
 
-SELECT name
-      ,qty
-      ,pre_qty
-      ,ROUND((qty - pre_qty) / pre_qty, 2) as qty_diff
-FROM
-  (SELECT *
-        ,LAG(qty) OVER (PARTITION BY name ORDER BY year) as pre_qty
-  FROM year_pre) as pre_out
-ORDER BY 4 DESC
+SELECT name 
+      ,qty 
+      ,pre_qty 
+      ,round ((qty - pre_qty)/pre_qty, 2 ) as qty_diff
+FROM 
+  (select * 
+        ,lag(qty) over (partition by name order by yr) as pre_qty
+  from year_pre ) as pre_out
+ORDER BY 4 DESC 
 LIMIT 3;
 ```
 
@@ -91,20 +91,20 @@ LIMIT 3;
 **Query:**
 ```sql
 WITH year_rk AS
-  (SELECT EXTRACT(YEAR FROM detail.ModifiedDate) as year
-        ,head.TerritoryID as territoryID
-        ,SUM(OrderQty) as order_cnt
+  (SELECT extract (year from detail.ModifiedDate) as yr 
+        ,head.TerritoryID as territory_id 
+        ,sum(OrderQty) as order_cnt
   FROM adventureworks2019.Sales.SalesOrderHeader as head
-  INNER JOIN adventureworks2019.Sales.SalesOrderDetail as detail
+  INNER JOIN adventureworks2019.Sales.SalesOrderDetail as detail 
     USING (SalesOrderID)
-  GROUP BY 1,2)
+  GROUP BY 1,2) 
 
 SELECT *
-FROM
-  (SELECT *
-        ,RANK() OVER (PARTITION BY year ORDER BY order_cnt DESC) as rk
-  FROM year_rk) as rk_out
-WHERE rk IN (1,2,3)
+FROM 
+  (select *
+        ,dense_rank() over (partition by yr order by order_cnt DESC) as rk
+  from year_rk) as rk_out
+WHERE rk in (1,2,3)
 ORDER BY 1 DESC, 4;
 ```
 
@@ -118,17 +118,19 @@ ORDER BY 1 DESC, 4;
 
 **Query:**
 ```sql
-SELECT EXTRACT(YEAR FROM sale.ModifiedDate) as year
-      ,subprd.Name as name
-      ,SUM((UnitPrice * OrderQty) - LineTotal) as total_cost
+SELECT extract (year from sale.ModifiedDate) as yr
+      ,subprd.Name as name 
+      ,round(
+            sum((UnitPrice  * OrderQty) - LineTotal)
+            ,2) as total_cost
 FROM adventureworks2019.Production.Product as prd
 INNER JOIN adventureworks2019.Production.ProductSubcategory as subprd
-  ON CAST(subprd.ProductSubcategoryID as STRING) = prd.ProductSubcategoryID
+  ON cast (subprd.ProductSubcategoryID as string) = prd.ProductSubcategoryID
 INNER JOIN adventureworks2019.Sales.SalesOrderDetail as sale
   USING (ProductID)
 INNER JOIN adventureworks2019.Sales.SpecialOffer as special
   USING (SpecialOfferID)
-WHERE type LIKE '%Seasonal Discount%'
+WHERE type like '%Seasonal Discount%'
 GROUP BY 1,2
 ORDER BY 2,3;
 ```
@@ -143,22 +145,22 @@ ORDER BY 2,3;
 
 **Query:**
 ```sql
-WITH diff_gr AS
+WITH diff_gr AS 
   (SELECT *
         ,month - month_join as diff
-  FROM
+  FROM 
       (SELECT CustomerID
-            ,MIN(EXTRACT(MONTH FROM ModifiedDate)) OVER (PARTITION BY CustomerID ORDER BY ModifiedDate) as month_join
-            ,EXTRACT(MONTH FROM ModifiedDate) as month
+            ,min (extract (month from ModifiedDate)) OVER (partition by CustomerID order by ModifiedDate) as month_join
+            ,extract (month from ModifiedDate) as month
       FROM adventureworks2019.Sales.SalesOrderHeader
-      WHERE EXTRACT(YEAR FROM ModifiedDate) = 2014
-            AND Status = 5) as month_diff)
+      WHERE extract (year from ModifiedDate) = 2014
+            and Status = 5) as join_out)
 
-SELECT month_join
-      ,CONCAT('M', diff) as month_diff
-      ,COUNT(DISTINCT CustomerID)
+SELECT month_join 
+      ,concat('M - ',diff) as month_diff
+      ,count(distinct CustomerID) as customer_cnt   
 FROM diff_gr
-GROUP BY month_join, month_diff
+GROUP BY month_join, month_diff 
 ORDER BY 1,2;
 ```
 
@@ -172,23 +174,24 @@ ORDER BY 1,2;
 
 **Query:**
 ```sql
-WITH stock_pre AS
-  (SELECT prd.Name as name
-        ,EXTRACT(MONTH FROM stock.ModifiedDate) as mth
-        ,EXTRACT(YEAR FROM stock.ModifiedDate) as yr
-        ,SUM(StockedQty) as stock_qty
-  FROM adventureworks2019.Production.WorkOrder as stock
-  INNER JOIN adventureworks2019.Production.Product as prd
+WITH stock_pre AS  
+  (SELECT prd.Name as name 
+        ,extract (month from stock.ModifiedDate) as mth
+        ,extract (year from stock.ModifiedDate) as yr
+        ,sum(StockedQty) as stock_qty
+  FROM adventureworks2019.Production.WorkOrder as stock 
+  INNER JOIN adventureworks2019.Production.Product as prd 
     USING (ProductID)
-  WHERE EXTRACT(YEAR FROM stock.ModifiedDate) = 2011
-  GROUP BY 1,2,3)
+  WHERE extract (year from stock.ModifiedDate) = 2011 
+  GROUP BY 1,2,3) 
 
 SELECT *
-      ,IFNULL(ROUND(100 * (stock_qty - stock_pre) / stock_pre, 1), 0) as diff
-FROM
+      ,ifnull(round (100*(stock_qty - stock_pre)/stock_pre,1) 
+              ,0) as diff
+FROM 
   (SELECT *
-        ,LAG(stock_qty) OVER (PARTITION BY name ORDER BY mth) as stock_pre
-  FROM stock_pre) as pre_out
+        ,lag(stock_qty) over (partition by name order by mth) as stock_pre
+  FROM stock_pre) as pre_out 
 ORDER BY 1, 2 DESC;
 ```
 
@@ -202,34 +205,33 @@ ORDER BY 1, 2 DESC;
 
 **Query:**
 ```sql
-WITH stock_join AS
+WITH stock_join AS 
   (SELECT ProductID
-          ,EXTRACT(MONTH FROM ModifiedDate) as mth
-          ,SUM(StockedQty) as stock
+          ,extract (month from ModifiedDate) as mth
+          ,sum(StockedQty) as stock
     FROM adventureworks2019.Production.WorkOrder
-    WHERE EXTRACT(YEAR FROM ModifiedDate) = 2011
-    GROUP BY 1,2),
-
-sale_join AS
+    WHERE extract (year from ModifiedDate) = 2011
+    GROUP BY 1,2)
+  ,sale_join AS 
   (SELECT ProductID
-          ,EXTRACT(MONTH FROM ModifiedDate) as mth
-          ,SUM(OrderQty) as sales
+          ,extract (month from ModifiedDate) as mth
+          ,sum(OrderQty) as sales
     FROM adventureworks2019.Sales.SalesOrderDetail
-    WHERE EXTRACT(YEAR FROM ModifiedDate) = 2011
+    WHERE extract (year from ModifiedDate) = 2011
     GROUP BY 1,2)
 
-SELECT sale_join.mth
-      ,'2011' as yr
-      ,prd.ProductID as productID
-      ,prd.Name as name
+SELECT stock_join.mth
+      ,2011 as yr 
+      ,prd.ProductID as product_id 
+      ,prd.Name as name 
       ,sales
       ,stock
-      ,ROUND(stock / sales, 1) as ratio
-FROM stock_join
-LEFT JOIN sale_join
+      ,round (stock/sales,2) as ratio
+FROM stock_join 
+LEFT JOIN sale_join 
   ON sale_join.ProductID = stock_join.ProductID
   AND sale_join.mth = stock_join.mth
-LEFT JOIN adventureworks2019.Production.Product as prd
+LEFT JOIN adventureworks2019.Production.Product as prd  
   ON stock_join.ProductID = prd.ProductID
 ORDER BY 1 DESC, 7 DESC;
 ```
@@ -244,13 +246,13 @@ ORDER BY 1 DESC, 7 DESC;
 
 **Query:**
 ```sql
-SELECT EXTRACT(YEAR FROM ModifiedDate) as year
+SELECT extract (year from ModifiedDate) as yr 
       ,1 as status
-      ,COUNT(DISTINCT PurchaseOrderID) as order_cnt
-      ,SUM(TotalDue) as value
+      ,count (distinct PurchaseOrderID) as order_cnt
+      ,sum(TotalDue) as value 
 FROM adventureworks2019.Purchasing.PurchaseOrderHeader
-WHERE Status = 1
-      AND EXTRACT(YEAR FROM ModifiedDate) = 2014
+WHERE Status = 1 
+      and extract (year from ModifiedDate) = 2014 
 GROUP BY 1,2;
 ```
 
